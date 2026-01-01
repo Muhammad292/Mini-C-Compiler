@@ -267,9 +267,9 @@ Semantic Error at line 6: Type mismatch in assignment (expected bool, got int)
 | **Analysis** | ✅ Good | LALR vs LL comparison, design justifications |
 
 ## Authors
-- [Your Name]
-- [Team Member 2]
-- [Team Member 3]
+- [Muhammad Hassnain]
+- [Abdullah Jay]
+- [@Tayyab_zahid]
 
 **Course**: CSC303L Compiler Construction  
 **Institution**: University of Engineering and Technology, Lahore  
