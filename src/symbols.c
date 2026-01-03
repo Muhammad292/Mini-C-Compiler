@@ -1,5 +1,7 @@
 #include "symbols.h"
 #include "semantic.h"
+#include <string.h>
+extern int line_no;
 
 SymbolTable* symbol_table_init() {
     SymbolTable *st = (SymbolTable*)malloc(sizeof(SymbolTable));
@@ -15,11 +17,23 @@ void symbol_table_close(SymbolTable *st) {
 }
 
 int insert_symbol(SymbolTable *st, const char *name, DataType type, SymbolKind kind) {
+    // Reserved-name check: 'main' is only allowed as a function name.
+    if (strcmp(name, "main") == 0 && kind != KIND_FUNC) {
+        if (kind == KIND_PARAM) {
+            report_semantic_error(line_no, "Usage of reserved name 'main' as parameter is not allowed");
+        } else {
+            report_semantic_error(line_no, "Usage of reserved name 'main' as variable is not allowed");
+        }
+        /* Return -1 to signal callers that an error was already reported */
+        return -1;
+    }
+
     // Check for redeclaration in current scope
     for (int i = st->scope_stack[st->scope_top]; i < st->symbol_count; i++) {
         if (st->symbols[i].scope_level == st->current_scope &&
             strcmp(st->symbols[i].name, name) == 0) {
-            report_semantic_error(0, "Redeclaration of '%s'", name);
+            /* Don't report here; callers provide the correct line number
+               and will call report_semantic_error when insert_symbol returns 0. */
             return 0;
         }
     }

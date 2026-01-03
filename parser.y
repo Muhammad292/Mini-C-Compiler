@@ -24,10 +24,12 @@ extern void yyrestart(FILE *);
 %token IF ELSE WHILE FOR RETURN INPUT OUTPUT
 %token TOK_INT TOK_FLOAT TOK_BOOL
 %token <sval> ID
+%token <sval> STRING
 %token <ival> INT_CONST
 %token <fval> FLOAT_CONST
 %token <bval> BOOL_CONST
-%token <sval> RELOP ADDOP MULOP
+%token ADD SUB MUL DIV
+%token EQ NE LE GE LT GT
 %token ASSIGN LAND LOR LNOT
 
 %type <type> type expr
@@ -35,9 +37,11 @@ extern void yyrestart(FILE *);
 %left LOR
 %left LAND
 %right LNOT
-%left RELOP
-%left ADDOP
-%left MULOP
+%left EQ NE LE GE LT GT
+%left ADD SUB
+%left MUL DIV
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 
 %%
 
@@ -53,13 +57,15 @@ decl_list:
 decl:
       type ID ';'        
       { 
-          if (!insert_symbol(global_symbol_table, $2, $1, KIND_VAR)) {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
+          if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of '%s'", $2);
           }
+          /* _rv == -1 means insert_symbol already reported the error */
           free($2);
       }
     | func_def
-    | error ';' { yyerror("Skipping invalid declaration"); yyerrok; }
+    | error ';' { log_error_msg("Skipping invalid declaration"); yyerrok; }
 ;
 
 type:
@@ -73,7 +79,8 @@ func_def:
       { 
           current_func_name = $2;
           current_func_ret_type = $1;
-          if (!insert_symbol(global_symbol_table, $2, $1, KIND_FUNC)) {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_FUNC);
+          if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of function '%s'", $2);
           }
           enter_scope(global_symbol_table);
@@ -98,7 +105,8 @@ param_list:
 param:
       type ID
       {
-          if (!insert_symbol(global_symbol_table, $2, $1, KIND_PARAM)) {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_PARAM);
+          if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of parameter '%s'", $2);
           }
           free($2);
@@ -117,7 +125,8 @@ stmt_list:
 stmt:
       type ID ';'
       {
-          if (!insert_symbol(global_symbol_table, $2, $1, KIND_VAR)) {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
+          if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of '%s'", $2);
           }
           free($2);
@@ -131,7 +140,7 @@ stmt:
     | return_stmt
     | block_stmt
     | ';'
-    | error ';'  { yyerror("Skipping invalid statement"); yyerrok; }
+    | error ';'  { log_error_msg("Skipping invalid statement"); yyerrok; }
 ;
 
 block_stmt:
@@ -154,27 +163,38 @@ assign_stmt:
 ;
 
 input_stmt:
-      INPUT '(' ID ')' ';'
-      {
-          if (!lookup_symbol(global_symbol_table, $3)) {
-              report_semantic_error(line_no, "Undeclared variable '%s'", $3);
-          }
-          free($3);
-      }
+    INPUT '(' in_list ')' ';'
+;
+
+in_list:
+    ID { if (!lookup_symbol(global_symbol_table, $1)) report_semantic_error(line_no, "Undeclared variable '%s'", $1); gen_input($1); free($1); }
+    | in_list ',' ID { if (!lookup_symbol(global_symbol_table, $3)) report_semantic_error(line_no, "Undeclared variable '%s'", $3); gen_input($3); free($3); }
 ;
 
 output_stmt:
-      OUTPUT '(' expr ')' ';'
+    OUTPUT '(' out_list ')' ';'
+;
+
+out_list:
+    out_item
+    | out_list ',' out_item
+;
+
+out_item:
+    STRING { gen_const_string($1); free($1); gen_output(); }
+    | expr   { gen_output(); }
 ;
 
 if_stmt:
-      IF '(' expr ')' stmt
-    | IF '(' expr ')' stmt ELSE stmt
+            IF '(' expr ')' stmt %prec LOWER_THAN_ELSE
+        | IF '(' expr ')' stmt ELSE stmt
 ;
 
 while_stmt:
       WHILE '(' expr ')' stmt
 ;
+
+/* else_part removed; single-word ELSEIF support reverted */
 
 for_stmt:
       FOR '(' for_init ';' expr ';' for_update ')' stmt
@@ -184,7 +204,8 @@ for_init:
       assign_stmt_no_semi
     | type ID ASSIGN expr
       {
-          if (!insert_symbol(global_symbol_table, $2, $1, KIND_VAR)) {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
+          if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of '%s'", $2);
           }
           free($2);
@@ -250,27 +271,66 @@ expr:
           }
           free($1);
       }
-    | expr ADDOP expr  
-      { 
-          expr_type = result_type($1, $3); 
-          gen_binary_op($2);
-          free($2);
-          $$ = expr_type;
-      }
-    | expr MULOP expr  
-      { 
-          expr_type = result_type($1, $3); 
-          gen_binary_op($2);
-          free($2);
-          $$ = expr_type;
-      }
-    | expr RELOP expr
-      {
-          expr_type = TYPE_BOOL;
-          gen_binary_op($2);
-          free($2);
-          $$ = TYPE_BOOL;
-      }
+        | expr ADD expr  
+            { 
+                    expr_type = result_type($1, $3); 
+                    gen_binary_op("+");
+                    $$ = expr_type;
+            }
+        | expr SUB expr  
+            { 
+                    expr_type = result_type($1, $3); 
+                    gen_binary_op("-");
+                    $$ = expr_type;
+            }
+        | expr MUL expr  
+            { 
+                    expr_type = result_type($1, $3); 
+                    gen_binary_op("*");
+                    $$ = expr_type;
+            }
+        | expr DIV expr  
+            { 
+                    expr_type = result_type($1, $3); 
+                    gen_binary_op("/");
+                    $$ = expr_type;
+            }
+        | expr EQ expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op("==");
+                    $$ = TYPE_BOOL;
+            }
+        | expr NE expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op("!=");
+                    $$ = TYPE_BOOL;
+            }
+        | expr LE expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op("<=");
+                    $$ = TYPE_BOOL;
+            }
+        | expr GE expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op(">=");
+                    $$ = TYPE_BOOL;
+            }
+        | expr LT expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op("<");
+                    $$ = TYPE_BOOL;
+            }
+        | expr GT expr
+            {
+                    expr_type = TYPE_BOOL;
+                    gen_binary_op(">");
+                    $$ = TYPE_BOOL;
+            }
     | expr LAND expr
       {
           check_bool_operands($1, $3, line_no);
@@ -361,12 +421,20 @@ int main(int argc, char **argv)
         /* parse the single chosen file */
         yyparse();
 
-        if (error_count == 0) {
+        /* Require a global 'main' function to be defined */
+        Symbol *main_sym = lookup_in_scope(global_symbol_table, "main", 0);
+        if (!main_sym || main_sym->kind != KIND_FUNC) {
+            report_semantic_error(0, "Program must define a global function 'main'");
+            /* ensure this counts as an error for overall result */
+            overall_errors += 1;
+        }
+
+        if (error_count == 0 && overall_errors == 0) {
             printf("\nCompilation of %s successful!\n", fname);
             symbol_table_print(global_symbol_table);
             print_icg();
         } else {
-            printf("\nCompilation of %s failed with %d error(s)\n", fname, error_count);
+            printf("\nCompilation of %s failed with %d error(s)\n", fname, error_count + overall_errors);
             overall_errors += error_count;
         }
 

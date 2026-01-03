@@ -1,6 +1,6 @@
  # POSIX-compatible Makefile for MiniC Compiler
 CC=gcc
-CFLAGS=-Wall -std=c99 -I src
+CFLAGS=-Wall -std=c99 -I src -Wno-unused-function
 FLEX=flex
 BISON=bison
 TARGET=bin/minic.exe
@@ -27,6 +27,7 @@ test: $(TARGET)
 	$(TARGET) tests/missing_semicolon.mc || true
 	$(TARGET) tests/undeclared_var.mc || true
 	$(TARGET) tests/redeclaration.mc || true
+	$(TARGET) tests/lexical_error.mc || true
 
 clean:
 	rm -f lex.yy.c parser.tab.c parser.tab.h

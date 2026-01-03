@@ -59,6 +59,15 @@ void gen_const_float(float v) {
     push_temp(temp);
 }
 
+void gen_const_string(const char *s) {
+    char code[200];
+    char* temp = new_temp();
+    /* store string literal (unquoted) in TAC for clarity */
+    snprintf(code, sizeof(code), "%s = \"%s\"", temp, s);
+    emit(code);
+    push_temp(temp);
+}
+
 void gen_id(char* name) {
     char code[100];
     char* temp = new_temp();
@@ -81,6 +90,19 @@ void gen_assign(char* id) {
     char code[100];
     char* temp = pop_temp();
     sprintf(code, "%s = %s", id, temp);
+    emit(code);
+}
+
+void gen_output() {
+    char code[200];
+    char* temp = pop_temp();
+    snprintf(code, sizeof(code), "print %s", temp);
+    emit(code);
+}
+
+void gen_input(const char *id) {
+    char code[200];
+    snprintf(code, sizeof(code), "read %s", id);
     emit(code);
 }
 
