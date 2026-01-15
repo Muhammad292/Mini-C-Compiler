@@ -48,7 +48,7 @@ MiniC-Compiler/
 - Assignment: `=`
 
 ### Statements
-- Variable declarations
+- Variable declarations (with optional initializer, e.g. `int x = 5;`)
 - Assignments
 - `input()` - Read input
 - `output()` - Write output
@@ -90,7 +90,8 @@ MiniC-Compiler/
   - Undeclared variable detection
   - Function return type validation
   - Boolean operand type checking
-  - Implicit type conversions (int → float)
+  - Implicit type conversions (int → float). The compiler also allows implicit float → int conversion but emits a warning for potential loss of precision.
+  - Declarations with initializers are supported (e.g. `int a = 2;`)
 
 ### 5. Intermediate Code Generator
 - **Files**: `src/icg.c`, `src/icg.h`
@@ -183,6 +184,16 @@ int main() {
 }
 ```
 
+### Declaration with Initializer and Implicit Conversion
+```c
+int main() {
+  int a = 2;
+  float c = 2.1;
+  int b = a + c; // allowed: implicit float->int conversion (warning)
+  return 0;
+}
+```
+
 ### Error Detection
 ```c
 int main() {
@@ -266,10 +277,8 @@ Semantic Error at line 6: Type mismatch in assignment (expected bool, got int)
 | **Code Quality** | ✅ Excellent | Well-documented, clean, and structured |
 | **Analysis** | ✅ Good | LALR vs LL comparison, design justifications |
 
-## Authors
+## Author
 - [Muhammad Hassnain]
-- [Abdullah Jay]
-- [@Tayyab_zahid]
 
 **Course**: CSC303L Compiler Construction  
 **Institution**: University of Engineering and Technology, Lahore  
