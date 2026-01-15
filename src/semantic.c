@@ -30,7 +30,17 @@ void check_assignment(DataType var_type, DataType e_type, int line) {
     if (var_type == TYPE_FLOAT && e_type == TYPE_INT) {
         return;
     }
-    
+    // Allow float-to-int implicit conversion but warn the user
+    if (var_type == TYPE_INT && e_type == TYPE_FLOAT) {
+        if (line > 0) {
+            fprintf(stderr, "Warning at line %d: implicit conversion from %s to %s\n",
+                    line, "float", "int");
+        } else {
+            fprintf(stderr, "Warning: implicit conversion from %s to %s\n", "float", "int");
+        }
+        return;
+    }
+
     if (var_type != e_type) {
         report_semantic_error(line, "Type mismatch in assignment (expected %s, got %s)",
                 type_to_string(var_type), type_to_string(e_type));

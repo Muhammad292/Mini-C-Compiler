@@ -64,6 +64,18 @@ decl:
           /* _rv == -1 means insert_symbol already reported the error */
           free($2);
       }
+    | type ID ASSIGN expr ';'
+      {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
+          if (_rv == 0) {
+              report_semantic_error(line_no, "Redeclaration of '%s'", $2);
+          } else if (_rv == 1) {
+              check_assignment($1, expr_type, line_no);
+              set_initialized(global_symbol_table, $2);
+              gen_assign($2);
+          }
+          free($2);
+      }
     | func_def
     | error ';' { log_error_msg("Skipping invalid declaration"); yyerrok; }
 ;
@@ -128,6 +140,18 @@ stmt:
           int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
           if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of '%s'", $2);
+          }
+          free($2);
+      }
+    | type ID ASSIGN expr ';'
+      {
+          int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
+          if (_rv == 0) {
+              report_semantic_error(line_no, "Redeclaration of '%s'", $2);
+          } else if (_rv == 1) {
+              check_assignment($1, expr_type, line_no);
+              set_initialized(global_symbol_table, $2);
+              gen_assign($2);
           }
           free($2);
       }
@@ -207,6 +231,11 @@ for_init:
           int _rv = insert_symbol(global_symbol_table, $2, $1, KIND_VAR);
           if (_rv == 0) {
               report_semantic_error(line_no, "Redeclaration of '%s'", $2);
+          }
+          else if (_rv == 1) {
+              check_assignment($1, expr_type, line_no);
+              set_initialized(global_symbol_table, $2);
+              gen_assign($2);
           }
           free($2);
       }

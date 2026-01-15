@@ -1,0 +1,19 @@
+ $env:PATH = "D:\msys64\usr\bin;$env:PATH"
+ 
+ bison -Wcounterexamples -d parser.y -o parser.tab.c
+       
+ bison -d -v parser.y -o parser.tab.c
+
+ gcc -Wall -std=c99 -I src -Wno-unused-function -o bin/minic.exe lex.yy.c parser.tab.c src/symbols.c src/semantic.c src/icg.c
+
+ Get-Location
+
+ Test-Path .\Makefile
+
+ make clean; make
+
+ make test     ./bin/minic.exe test_validation.mc
+
+ extension in vscode:
+  bison,lex, yash, makefiletools
+

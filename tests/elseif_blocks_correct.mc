@@ -1,0 +1,10 @@
+int main() {
+    int x;
+    if (false) {
+        x = 1;
+    } else if (true) {
+        x = 2;
+    } else {
+        x = 3;
+    }
+}

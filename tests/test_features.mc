@@ -8,7 +8,7 @@ int add(int a, int b) {
 int main() {
     int y;
     bool flag;
-    
+   // add(y,y);
     y = 10;
     flag = true;
     
