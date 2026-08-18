@@ -278,11 +278,10 @@ Semantic Error at line 6: Type mismatch in assignment (expected bool, got int)
 | **Analysis** | ✅ Good | LALR vs LL comparison, design justifications |
 
 ## Author
-- [Muhammad Hassnain]
+- **Muhammad Hassnain**
 
 **Course**: CSC303L Compiler Construction  
-**Institution**: University of Engineering and Technology, Lahore  
-**Deadline**: 04-01-2026
+**Institution**: University of Engineering and Technology, Lahore 
 
 ## References
 - Flex Manual: https://github.com/westes/flex
